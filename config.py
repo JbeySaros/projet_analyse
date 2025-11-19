@@ -1,85 +1,60 @@
-"""Configuration centralisée de l'application."""
-import os
-from pathlib import Path
-from typing import Literal
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, validator
-
+from pydantic_settings import BaseSettings
+from pydantic import Field
+from typing import List, Optional
 
 class Settings(BaseSettings):
-    """Configuration principale."""
-    
+    # Application
     APP_NAME: str = "Data Analysis Platform"
     APP_VERSION: str = "1.0.0"
-    ENVIRONMENT: Literal["development", "staging", "production"] = "development"
+    ENVIRONMENT: str = "development"
     DEBUG: bool = True
-    
-    BASE_DIR: Path = Path(__file__).resolve().parent
-    DATA_DIR: Path = BASE_DIR / "data"
-    UPLOAD_DIR: Path = BASE_DIR / "uploads"
-    OUTPUT_DIR: Path = BASE_DIR / "outputs"
-    LOG_DIR: Path = BASE_DIR / "logs"
-    
+
+    # API
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
-    API_PREFIX: str = "/api/v1"
-    
+    API_WORKERS: int = 4
+
+    # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
-    REDIS_PASSWORD: str | None = None
-    REDIS_URL: str = ""
-    
-    @validator("REDIS_URL", pre=True, always=True)
-    def assemble_redis_url(cls, v, values):
-        if v:
-            return v
-        password = values.get("REDIS_PASSWORD")
-        auth = f":{password}@" if password else ""
-        return f"redis://{auth}{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/{values.get('REDIS_DB')}"
-    
+    REDIS_PASSWORD: Optional[str] = None
     CACHE_TTL: int = 3600
     CACHE_ENABLED: bool = True
-    
-    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    LOG_FILE_MAX_BYTES: int = 10 * 1024 * 1024
+
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE_MAX_BYTES: int = 10485760
     LOG_FILE_BACKUP_COUNT: int = 5
-    
-    MAX_FILE_SIZE: int = 100 * 1024 * 1024
+
+    # Data Processing
+    MAX_FILE_SIZE: int = 104857600
     CHUNK_SIZE: int = 10000
-    ALLOWED_EXTENSIONS: set[str] = {"csv", "xlsx", "xls"}
-    
     CSV_ENCODING: str = "utf-8"
     CSV_DELIMITER: str = ","
-    
-    OUTLIER_METHOD: Literal["iqr", "zscore"] = "iqr"
+
+    # Statistics
+    OUTLIER_METHOD: str = "iqr"
     OUTLIER_THRESHOLD: float = 1.5
-    
+    ZSCORE_THRESHOLD: float = 3.0
+
+    # Visualization
     CHART_THEME: str = "plotly"
     CHART_WIDTH: int = 1200
     CHART_HEIGHT: int = 600
-    
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
-    RATE_LIMIT: str = "100/minute"
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True
-    )
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._create_directories()
-    
-    def _create_directories(self):
-        for directory in [self.DATA_DIR, self.UPLOAD_DIR, self.OUTPUT_DIR, self.LOG_DIR]:
-            directory.mkdir(parents=True, exist_ok=True)
 
+    # Security
+    SECRET_KEY: str = "your-secret-key-change-in-production"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # CORS
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+
+    # Rate Limiting
+    RATE_LIMIT: str = "100/minute"
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 settings = Settings()
-
-
-def get_settings() -> Settings:
-    return settings
