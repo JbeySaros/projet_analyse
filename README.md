@@ -2,8 +2,11 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-green)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+[![Jenkins](https://img.shields.io/badge/Jenkins-D24939?logo=jenkins&logoColor=white)](https://www.jenkins.io/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)](https://redis.io/)
 
 > Plateforme SaaS complète pour l'ingestion, le traitement et l'analyse de données de ventes multi-sources avec génération de rapports interactifs.
 
@@ -23,33 +26,33 @@ Cette plateforme d'analyse de données est conçue comme un système **robuste**
 
 ```
 projet_analyse/
-├── data_loader/           # Couche d'entrée des données
-│   ├── csv_loader.py     # Chargement CSV avec Repository Pattern
-│   ├── data_validator.py # Validation des données
-│   └── exceptions.py     # Exceptions personnalisées
+├── data_loader/             # Couche d'entrée des données
+│   ├── csv_loader.py        # Chargement CSV avec Repository Pattern
+│   ├── data_validator.py    # Validation des données
+│   └── exceptions.py        # Exceptions personnalisées
 │
-├── data_processor/        # Couche de traitement
-│   ├── cleaner.py        # Nettoyage avancé (outliers, imputation)
-│   ├── aggregator.py     # Agrégations complexes et KPIs
-│   └── statistics.py     # Statistiques descriptives et inférentielles
+├── data_processor/          # Couche de traitement
+│   ├── cleaner.py           # Nettoyage avancé (outliers, imputation)
+│   ├── aggregator.py        # Agrégations complexes et KPIs
+│   └── statistics.py        # Statistiques descriptives et inférentielles
 │
-├── visualization/         # Couche de visualisation
-│   ├── chart_builder.py  # Création de graphiques (Plotly/Matplotlib)
-│   └── report_generator.py # Génération de rapports HTML/PDF
+├── visualization/           # Couche de visualisation
+│   ├── chart_builder.py     # Création de graphiques (Plotly/Matplotlib)
+│   └── report_generator.py  # Génération de rapports HTML/PDF
 │
-├── api/                   # API REST FastAPI
-│   └── main.py           # Endpoints et routes
+├── api/                     # API REST FastAPI
+│   └── main.py              # Endpoints et routes
 │
-├── tests/                 # Tests unitaires et d'intégration
-│   └── test_loader.py    # Exemple de tests avec pytest
+├── tests/                   # Tests unitaires et d'intégration
+│   └── test_loader.py       # Exemple de tests avec pytest
 │
-├── utils/                 # Utilitaires
-│   └── logger.py         # Logging professionnel
+├── utils/                   # Utilitaires
+│   └── logger.py            # Logging professionnel
 │
-├── config.py              # Configuration centralisée
-├── main.py                # Point d'entrée du pipeline
-├── requirements.txt       # Dépendances Python
-└── README.md              # Documentation
+├── config.py                # Configuration centralisée
+├── main.py                  # Point d'entrée du pipeline
+├── requirements.txt         # Dépendances Python
+└── README.md                # Documentation
 ```
 
 ---
