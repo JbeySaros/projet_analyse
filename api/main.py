@@ -2,7 +2,7 @@
 API REST FastAPI pour la plateforme d'analyse de données.
 Point d'entrée principal de l'API.
 """
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -116,6 +116,7 @@ async def health_check():
 @app.post(f"{settings.API_PREFIX}/upload")
 @limiter.limit(settings.RATE_LIMIT)
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     validate: bool = Query(True, description="Valider les données"),
     loader: DataLoaderRepository = Depends(get_data_loader),
@@ -123,16 +124,16 @@ async def upload_file(
 ):
     """
     Upload et charge un fichier CSV/Excel.
-    
+
     Args:
         file: Fichier à uploader
         validate: Effectuer la validation
-        
+
     Returns:
         JSON avec informations sur les données chargées
     """
     logger.info(f"Upload fichier: {file.filename}")
-    
+
     # Vérification de l'extension
     file_ext = Path(file.filename).suffix.lower().lstrip('.')
     if file_ext not in settings.ALLOWED_EXTENSIONS:
@@ -140,23 +141,23 @@ async def upload_file(
             status_code=400,
             detail=f"Format non supporté: {file_ext}. Formats autorisés: {settings.ALLOWED_EXTENSIONS}"
         )
-    
+
     try:
         # Sauvegarder temporairement le fichier
         temp_path = settings.UPLOAD_DIR / f"temp_{datetime.now().timestamp()}_{file.filename}"
-        
+
         with open(temp_path, "wb") as f:
             content = await file.read()
             f.write(content)
-        
+
         # Charger les données
         df = loader.load_data(temp_path)
-        
+
         # Validation optionnelle
         validation_result = None
         if validate and file_ext == 'csv':
             validation_result = validator.validate_sales_data(df)
-        
+
         # Informations à retourner
         response = {
             "success": True,
@@ -171,10 +172,10 @@ async def upload_file(
                 "warnings": validation_result.warnings if validation_result else []
             } if validation_result else None
         }
-        
+
         logger.info(f"Fichier chargé avec succès: {len(df)} lignes")
         return response
-    
+
     except Exception as e:
         logger.error(f"Erreur lors de l'upload: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -191,6 +192,7 @@ async def upload_file(
 @app.post(f"{settings.API_PREFIX}/analyze")
 @limiter.limit(settings.RATE_LIMIT)
 async def analyze_data(
+    request: Request,
     file: UploadFile = File(...),
     clean: bool = Query(True, description="Nettoyer les données"),
     remove_outliers: bool = Query(False, description="Supprimer les outliers"),
@@ -202,19 +204,19 @@ async def analyze_data(
 ):
     """
     Analyse complète d'un fichier de données avec cache Redis.
-    
+
     Returns:
         JSON avec KPIs, statistiques et agrégations
     """
     logger.info(f"Analyse des données: {file.filename}")
-    
+
     temp_path = None
     try:
         # Calculer le hash du fichier pour le cache
         content = await file.read()
         import hashlib
         file_hash = hashlib.md5(content).hexdigest()
-        
+
         # Vérifier le cache si activé
         if use_cache and cache.is_available:
             cache_key = f"analysis:{file_hash}:full"
@@ -222,40 +224,40 @@ async def analyze_data(
             if cached_result:
                 logger.info(f"✓ Résultat d'analyse en cache pour {file.filename}")
                 return cached_result
-        
+
         # Sauvegarder et charger
         temp_path = settings.UPLOAD_DIR / f"analyze_{datetime.now().timestamp()}_{file.filename}"
         with open(temp_path, "wb") as f:
             f.write(content)
-        
+
         df = loader.load_data(temp_path)
-        
+
         # Nettoyage optionnel
         if clean:
             df = cleaner.clean(df, remove_outliers=remove_outliers, impute_missing=True)
-        
+
         # Calculs avec cache par sous-partie
         if use_cache and cache.is_available:
             @cache_analysis_result(file_hash, "kpis")
             def get_kpis():
                 return aggregator.calculate_kpis(df)
-            
+
             @cache_analysis_result(file_hash, "by_category")
             def get_by_category():
                 return aggregator.calculate_sales_by_category(df).to_dict('records')
-            
+
             @cache_analysis_result(file_hash, "by_city")
             def get_by_city():
                 return aggregator.calculate_sales_by_city(df).to_dict('records')
-            
+
             @cache_analysis_result(file_hash, "top_products")
             def get_top_products():
                 return aggregator.calculate_top_products(df, top_n=10).to_dict('records')
-            
+
             @cache_analysis_result(file_hash, "stats")
             def get_stats():
                 return stats_calc.generate_statistics_report(df)
-            
+
             kpis = get_kpis()
             sales_by_category = get_by_category()
             sales_by_city = get_by_city()
@@ -267,7 +269,7 @@ async def analyze_data(
             sales_by_city = aggregator.calculate_sales_by_city(df).to_dict('records')
             top_products = aggregator.calculate_top_products(df, top_n=10).to_dict('records')
             stats_report = stats_calc.generate_statistics_report(df)
-        
+
         response = {
             "success": True,
             "data_info": {
@@ -281,16 +283,16 @@ async def analyze_data(
             "statistics": stats_report,
             "cached": False
         }
-        
+
         # Mettre en cache le résultat complet
         if use_cache and cache.is_available:
             cache_key = f"analysis:{file_hash}:full"
             cache.set(cache_key, response, ttl=settings.CACHE_TTL)
             logger.info(f"✓ Résultat mis en cache: {cache_key}")
-        
+
         logger.info("Analyse terminée avec succès")
         return response
-    
+
     except Exception as e:
         logger.error(f"Erreur lors de l'analyse: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -306,6 +308,7 @@ async def analyze_data(
 @app.post(f"{settings.API_PREFIX}/charts/bar")
 @limiter.limit(settings.RATE_LIMIT)
 async def create_bar_chart(
+    request: Request,
     file: UploadFile = File(...),
     x: str = Query(..., description="Colonne X"),
     y: str = Query(..., description="Colonne Y"),
@@ -321,20 +324,20 @@ async def create_bar_chart(
         temp_path = settings.UPLOAD_DIR / f"chart_{datetime.now().timestamp()}_{file.filename}"
         with open(temp_path, "wb") as f:
             f.write(await file.read())
-        
+
         df = loader.load_data(temp_path)
-        
+
         # Agrégation si nécessaire
         if df[x].dtype == 'object':
             df = df.groupby(x)[y].sum().reset_index()
-        
+
         fig = chart_builder.create_bar_chart(df, x=x, y=y, title=title)
-        
+
         # Retourner le HTML du graphique
         html = fig.to_html(include_plotlyjs='cdn')
-        
+
         return {"success": True, "html": html}
-    
+
     except Exception as e:
         logger.error(f"Erreur création graphique: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -350,6 +353,7 @@ async def create_bar_chart(
 @app.post(f"{settings.API_PREFIX}/reports/generate")
 @limiter.limit("10/hour")  # Limite plus stricte pour les rapports
 async def generate_report(
+    request: Request,
     file: UploadFile = File(...),
     format: str = Query("html", regex="^(html|pdf)$"),
     loader: DataLoaderRepository = Depends(get_data_loader),
@@ -357,47 +361,46 @@ async def generate_report(
 ):
     """
     Génère un rapport complet d'analyse.
-    
     Args:
         format: Format du rapport ('html' ou 'pdf')
-        
+
     Returns:
         Fichier du rapport généré
     """
     logger.info(f"Génération de rapport ({format}): {file.filename}")
-    
+
     temp_input = None
     temp_output = None
-    
+
     try:
         # Charger les données
         temp_input = settings.UPLOAD_DIR / f"report_input_{datetime.now().timestamp()}_{file.filename}"
         with open(temp_input, "wb") as f:
             f.write(await file.read())
-        
+
         df = loader.load_data(temp_input)
-        
+
         # Générer le rapport
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_filename = f"rapport_analyse_{timestamp}.{format}"
         temp_output = settings.OUTPUT_DIR / output_filename
-        
+
         report_path = report_gen.generate_sales_report(
             df,
             output_path=str(temp_output),
             format=format,
             include_charts=True
         )
-        
+
         logger.info(f"Rapport généré: {report_path}")
-        
+
         # Retourner le fichier
         return FileResponse(
             path=report_path,
             filename=output_filename,
             media_type='application/pdf' if format == 'pdf' else 'text/html'
         )
-    
+
     except Exception as e:
         logger.error(f"Erreur génération rapport: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -413,6 +416,7 @@ async def generate_report(
 @app.post(f"{settings.API_PREFIX}/stats/describe")
 @limiter.limit(settings.RATE_LIMIT)
 async def describe_statistics(
+    request: Request,
     file: UploadFile = File(...),
     loader: DataLoaderRepository = Depends(get_data_loader),
     stats_calc: StatisticsCalculator = Depends(get_stats_calc)
@@ -425,20 +429,20 @@ async def describe_statistics(
         temp_path = settings.UPLOAD_DIR / f"stats_{datetime.now().timestamp()}_{file.filename}"
         with open(temp_path, "wb") as f:
             f.write(await file.read())
-        
+
         df = loader.load_data(temp_path)
-        
+
         # Calcul des statistiques
         stats_dict = stats_calc.describe_dataframe(df)
-        
+
         # Conversion en format JSON-friendly
         result = {
             col: stats.to_dict()
             for col, stats in stats_dict.items()
         }
-        
+
         return {"success": True, "statistics": result}
-    
+
     except Exception as e:
         logger.error(f"Erreur calcul statistiques: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -450,6 +454,7 @@ async def describe_statistics(
 @app.post(f"{settings.API_PREFIX}/stats/correlation")
 @limiter.limit(settings.RATE_LIMIT)
 async def calculate_correlation(
+    request: Request,
     file: UploadFile = File(...),
     method: str = Query("pearson", regex="^(pearson|spearman|kendall)$"),
     loader: DataLoaderRepository = Depends(get_data_loader),
@@ -463,18 +468,18 @@ async def calculate_correlation(
         temp_path = settings.UPLOAD_DIR / f"corr_{datetime.now().timestamp()}_{file.filename}"
         with open(temp_path, "wb") as f:
             f.write(await file.read())
-        
+
         df = loader.load_data(temp_path)
-        
+
         # Calcul de la corrélation
         corr_matrix = stats_calc.calculate_correlation_matrix(df, method=method)
-        
+
         return {
             "success": True,
             "method": method,
             "correlation_matrix": corr_matrix.to_dict()
         }
-    
+
     except Exception as e:
         logger.error(f"Erreur calcul corrélation: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
