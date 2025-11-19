@@ -538,7 +538,7 @@ docker-compose down
 
 ---
 
-## 📝 Licence
+##  Licence
 
 Ce projet est sous licence GNU GPL v3
 
