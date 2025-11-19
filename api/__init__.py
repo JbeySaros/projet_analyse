@@ -23,17 +23,20 @@ Features:
 Usage:
     # Démarrer l'API
     >>> uvicorn api.main:app --reload
-    
+
     # Ou
     >>> python api/main.py
-    
+
     # Accéder à la doc
     >>> http://localhost:8000/api/docs
 """
 
 __version__ = "1.0.0"
-__author__ = "Data Analysis Team"
+__author__ = "JbeySaros"
 
-from api.main import app
+try:
+    from api.main import app
+except ImportError:
+    app = None
 
 __all__ = ["app"]
