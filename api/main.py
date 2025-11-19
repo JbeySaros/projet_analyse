@@ -14,7 +14,7 @@ import pandas as pd
 import tempfile
 from datetime import datetime
 
-from config import settings, get_settings
+from ..config import settings, get_settings
 from utils.logger import get_logger
 from utils.cache import cache, cached, cache_analysis_result, get_cache_stats
 from data_loader.csv_loader import DataLoaderRepository
