@@ -425,3 +425,12 @@ class ReportGenerator:
 
         logger.info(f"Excel généré : {output_path}")
         return output_path
+
+    async def generate_report_html(self, html_content: str, output_path: str):
+        """Génère simplement un fichier HTML (version minimaliste pour les tests)."""
+        import aiofiles
+
+        async with aiofiles.open(output_path, "w", encoding="utf-8") as f:
+            await f.write(html_content)
+
+        return output_path

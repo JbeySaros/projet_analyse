@@ -1,4 +1,5 @@
 import pytest
+from config import settings
 
 @pytest.mark.asyncio
 async def test_file_upload(client, tmp_path):
@@ -7,7 +8,7 @@ async def test_file_upload(client, tmp_path):
 
     with file_path.open("rb") as f:
         response = await client.post(
-            "/api/upload",
+            f"{settings.API_PREFIX}/upload",
             files={"file": ("sample.csv", f, "text/csv")},
         )
 

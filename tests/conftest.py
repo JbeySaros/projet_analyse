@@ -1,6 +1,9 @@
-"""Configuration pytest pour ajouter le répertoire au PYTHONPATH."""
-import sys
-from pathlib import Path
+import pytest
+from httpx import AsyncClient, ASGITransport
+from api.main import app
 
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+@pytest.fixture
+async def client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
