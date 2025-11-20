@@ -31,4 +31,4 @@ Usage:
 """
 
 __version__ = "1.0.0"
-__author__ = "Data Analysis Team"
+__author__ = "JbeySaros"
