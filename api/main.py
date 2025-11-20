@@ -508,7 +508,7 @@ async def clear_cache():
     return {"success": False, "message": "Cache non disponible"}
 
 
-@app.delete(f"{settings.API_PREFIX}/cache/{key}")
+@app.delete(f"{settings.API_PREFIX}/cache/{{key}}")
 async def delete_cache_key(key: str):
     """Supprime une clé spécifique du cache."""
     if cache.is_available:
