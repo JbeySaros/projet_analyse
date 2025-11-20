@@ -6,3 +6,9 @@ services:
        image: redis:7-alpine
      postgres:
        image: postgres:15
+       environment:
+         POSTGRES_USER: postgres
+         POSTGRES_PASSWORD: p0stGres
+         POSTGRES_DB: projet_analyse
+       ports:
+         - "5432:5432"

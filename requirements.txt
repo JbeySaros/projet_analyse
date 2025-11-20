@@ -53,3 +53,4 @@ pylint>=3.0.0
 # Utilities
 python-dateutil>=2.8.2
 pytz>=2023.3
+chardet>=5.2.0
